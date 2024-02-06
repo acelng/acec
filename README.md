@@ -1,2 +1,2 @@
-# BComp
-Compiler for the B language, written in C.
+# acec
+Compiler for the ace language, written in C.
