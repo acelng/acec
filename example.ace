@@ -1,0 +1,9 @@
+/*
+ * ACE FILE EXAMPLE
+ *
+ * Created by Luca Mazza 2024/02/20
+ */
+
+void ciao(void) {
+    float32 var;
+}
