@@ -31,7 +31,7 @@ static bool at_sol;
 /// If the current pos follows space
 static bool has_space;
 
-/// Reports error & exit
+/// Prints a formatted error given a format string
 void error(char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
@@ -61,7 +61,7 @@ static void verror_at(char *filename, char *input, int line_no, char *loc, char 
     fprintf(stderr, "\n");
 }
 
-/// Reports an error at a given location
+/// Prints a formatted error at `loc` given a format string and location
 void error_at(char *loc, char *fmt, ...) {
     int line_no = 1;
     for (char *p = current_file->contents; p < loc; p++) if (*p == ES_NL) line_no++;
@@ -71,7 +71,15 @@ void error_at(char *loc, char *fmt, ...) {
     exit(1);
 }
 
-/// Reports an error at a given token
+/// Prints a formatted error given a format string.
+/// The format string must be a printf format string.
+/// </p>
+/// Output example:
+/// <pre>
+/// @code
+/// example.ace:10: x=y+1;
+///                   ^ Unexpected token
+/// </pre>
 void error_tok(Token *tok, char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
@@ -79,7 +87,15 @@ void error_tok(Token *tok, char *fmt, ...) {
     exit(1);
 }
 
-/// Reports a warning at a given token
+/// Prints a formatted warning given a format string.
+/// The format string must be a printf format string.
+/// </p>
+/// Output example:
+/// <pre>
+/// @code
+/// example.ace:10: x=y+1;
+///                   ^ Warning...
+/// </pre>
 void warn_tok(Token *tok, char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
@@ -87,18 +103,27 @@ void warn_tok(Token *tok, char *fmt, ...) {
     va_end(ap);
 }
 
-/// Consumes current token if it matches `op`
+/// Compares a token with a matching string.
+/// If the string represents the same token, returns true.
+/// </p>
+/// This function is used compare token during the tokenization process.
 bool equal(Token *tok, char *op) {
     return memcmp(tok->loc, op, tok->len) == 0 && op[tok->len] == ES_NUL;
 }
 
-/// Ensures current token is `op`
+/// Skip the current token if it matches `op`.
+/// Returns the next token.
+/// </p>
+/// This function is used skip ignored token during the tokenization process.
 Token *skip(Token *tok, char *op) {
     if (!equal(tok, op)) error_tok(tok, EXPECTED_STR, op);
     return tok->next;
 }
 
-/// Consumes current token if it matches `op`
+/// Consumes the current token if it matches `str`.
+/// Returns true if the token matches and is consumed.
+/// </p>
+/// This function is used consume tokens during the tokenization process.
 bool consume(Token **rest, Token *tok, char *str) {
     if (equal(tok, str)) {
         *rest = tok->next;
@@ -167,13 +192,13 @@ static bool is_keyword(Token *tok) {
 
     if (map.capacity == 0) {
         static char *kw[] = {
-                KW_RETURN, KW_IF, KW_ELSE, KW_FOR, KW_WHILE, KW_INT, KW_SIZEOF,
-                KW_CHAR, KW_STRUCT, KW_UNION, KW_SHORT, KW_LONG, KW_VOID, KW_TYPEDEF,
-                KW_BOOL, KW_ENUM, KW_STATIC, KW_GOTO, KW_BREAK, KW_CONTINUE,
-                KW_SWITCH, KW_CASE, KW_DEFAULT, KW_EXTERN, PP_ALIGNOF, PP_ALIGNAS,
-                KW_DO, KW_SIGNED, KW_UNSIGNED, KW_CONST, KW_VOLATILE, KW_REGISTER,
-                KW_RESTRICT, PP_NORETURN, KW_FLOAT, KW_DOUBLE, KW_TYPEOF,
-                PP_ASM, PP_THREAD_LOCAL, PP_THREAD, PP_ATOMIC
+                KW_YIELD, KW_IF, KW_ELSE, KW_FOR, KW_WHILE, KW_INT32, KW_SIZEOF,
+                KW_CHAR, KW_STRUCT, KW_UNION, KW_INT16, KW_INT64, KW_VOID, KW_ALIAS,
+                KW_BOOL, KW_ENUM, KW_STATIC, KW_JUMP, KW_STOP, KW_NEXT,
+                KW_SWITCH, KW_CASE, KW_DEFAULT, KW_OUTS, PP_ALIGNOF, PP_ALIGNAS,
+                KW_DO, KW_FIX, KW_VLT, KW_KEEP, KW_LIMIT, PP_NOYIELD,
+                KW_FLOAT32, KW_FLOAT64, KW_TYPEOF, PP_ASM, PP_THREAD_LOCAL, PP_THREAD,
+                PP_ATOMIC
         };
 
         for (int i = 0; i < sizeof(kw) / sizeof(*kw); i++)
@@ -396,7 +421,7 @@ static void convert_pp_number(Token *tok) {
         ty = ty_float;
         end++;
     } else if (*end == 'l' || *end == 'L') {
-        ty = ty_ldouble;
+        ty = ty_quad;
         end++;
     } else {
         ty = ty_double;
@@ -407,7 +432,9 @@ static void convert_pp_number(Token *tok) {
     tok->ty = ty;
 }
 
-/// Convert all pp-number tokens to regular number tokens.
+/// Converts preprocessor tokens to regular tokens.
+/// </p>
+/// This function is used in the tokenization process.
 void convert_pp_tokens(Token *tok) {
     for (Token *t = tok; t->kind != TK_EOF; t = t->next) {
         if (is_keyword(t)) t->kind = TK_KEYWORD;
@@ -428,7 +455,9 @@ static void add_line_numbers(Token *tok) {
     } while (*p++);
 }
 
-/// Tokenize a string literal and returns a new token.
+/// Converts a string literal to its token form.
+/// </p>
+/// This function is used in the tokenization process, to parse string literals.
 Token *tokenize_string_literal(Token *tok, Type *basety) {
     Token *t;
     if (basety->size == 2) t = read_utf16_string_literal(tok->loc, tok->loc);
@@ -437,7 +466,9 @@ Token *tokenize_string_literal(Token *tok, Type *basety) {
     return t;
 }
 
-/// Tokenize a given string and returns new tokens.
+/// Tokenizes an entire source file given the file object.
+/// </p>
+/// This function is used in the tokenization process, to parse source files.
 Token *tokenize(File *file) {
     current_file = file;
     char *p = file->contents;
@@ -592,12 +623,15 @@ static char *read_file(char *path) {
     return buf;
 }
 
-/// Returns the list of input files.
+/// Returns the list of input files for the tokenization process.
 File **get_input_files(void) {
     return input_files;
 }
 
-/// Creates a new file.
+/// Creates a new file, given a name, a number and its contents.
+/// Returns the new file.
+/// </p>
+/// Used in the tokenization process to create output files.
 File *new_file(char *name, int file_no, char *contents) {
     File *file = calloc(1, sizeof(File));
     file->name = name;
@@ -687,7 +721,9 @@ static void convert_universal_chars(char *p) {
     *q = ES_NUL;
 }
 
-/// Tokenizes a given file.
+/// Tokenizes an entire source file given the filename.
+/// </p>
+/// This function is used in the tokenization process, to parse source files.
 Token *tokenize_file(char *path) {
     char *p = read_file(path);
     if (!p) return NULL;
