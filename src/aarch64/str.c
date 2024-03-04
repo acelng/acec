@@ -17,7 +17,9 @@
 
 #include "acec.h"
 
-/// Pushes a new string into the `StringArray`
+/// Pushes a string into a string array.
+/// </p>
+/// If the array is full, it is doubled in size.
 void strarray_push(StringArray *arr, char *s) {
     if (!arr->data) {
         arr->data = calloc(8, sizeof(char *));
@@ -31,7 +33,9 @@ void strarray_push(StringArray *arr, char *s) {
     arr->data[arr->len++] = s;
 }
 
-/// Returns a formatted string given a format and arguments
+/// Performs the formatting of a string, reading a formatted string
+/// in the classic `printf` format ("Print %s%d%f"...) and returns the
+/// string filled with the values of the arguments.
 char *format(char *fmt, ...) {
     char *buf;
     size_t buflen;
